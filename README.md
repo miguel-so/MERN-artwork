@@ -9,7 +9,7 @@ Each artwork will have image, title, size, note, sold. The idea is to allow arti
 on user side, there is a favorite feature for each artwork and it should be handled by cookies or localstorage since there will be no login function for normal users.
 If any artwork is fine for users to buy, users will click contact artist button to see contact from to send an email to the correct artist.
 
-And 1. No right click for each artwork, copy, or download on the art should be allowed. Right click should be disabled.
+And 1. No right click for each artwork, copy, or download on the art should not be allowed. Right click should be disabled.
 2. Allow the user to zoom in on a picture and see the painting details. Like, when you are on a retail site and buying a shirt and you get an option to zoom in on the collar and or pocket.
 
 Authentication can be used with JWT auth and email gateway can be Sendgrid SMTP service, database can be MongoDB. Backend should be done using Node.js + ExpressJS
