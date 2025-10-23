@@ -1,1 +1,1 @@
-# react-artwork
+This project is built using plain HTML/CSS/JS with assets but I want same frontend project built in React with Typescript. This project is using bootstrap for styling and is using several JS functionalities like image galaery etc and I need all of them in react project
