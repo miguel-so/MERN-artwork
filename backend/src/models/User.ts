@@ -21,6 +21,11 @@ interface UserAttributes {
   };
   resetPasswordToken?: string;
   resetPasswordExpire?: Date;
+  emailVerificationToken?: string;
+  emailVerificationExpire?: Date;
+  isEmailVerified: boolean;
+  resetPasswordCode?: string;
+  resetPasswordCodeExpire?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -47,6 +52,11 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
   };
   public resetPasswordToken?: string;
   public resetPasswordExpire?: Date;
+  public emailVerificationToken?: string;
+  public emailVerificationExpire?: Date;
+  public isEmailVerified!: boolean;
+  public resetPasswordCode?: string;
+  public resetPasswordCodeExpire?: Date;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 }
@@ -111,6 +121,27 @@ User.init(
       allowNull: true
     },
     resetPasswordExpire: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    emailVerificationToken: {
+      type: DataTypes.STRING(255),
+      allowNull: true
+    },
+    emailVerificationExpire: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    isEmailVerified: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
+    resetPasswordCode: {
+      type: DataTypes.STRING(6),
+      allowNull: true
+    },
+    resetPasswordCodeExpire: {
       type: DataTypes.DATE,
       allowNull: true
     },

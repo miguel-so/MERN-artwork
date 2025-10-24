@@ -16,6 +16,11 @@ import ArtworkDetails from './pages/ArtworkDetails';
 import ContactArtist from './pages/ContactArtist';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import VerifyEmail from './pages/VerifyEmail';
+import AdminDashboard from './pages/AdminDashboard';
+import ArtistDashboard from './pages/ArtistDashboard';
 
 // Create a client
 const queryClient = new QueryClient({
@@ -42,12 +47,15 @@ function App() {
               <Route path="/arts/:id/contact" element={<Layout><ContactArtist /></Layout>} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/verify-email/:token" element={<VerifyEmail />} />
               
               {/* Protected Routes - Artist Dashboard */}
-              <Route path="/artist/dashboard" element={<Layout><div>Artist Dashboard - Coming Soon</div></Layout>} />
+              <Route path="/artist/dashboard" element={<Layout><ArtistDashboard /></Layout>} />
               
               {/* Protected Routes - Admin Panel */}
-              <Route path="/admin" element={<Layout><div>Admin Panel - Coming Soon</div></Layout>} />
+              <Route path="/admin" element={<Layout><AdminDashboard /></Layout>} />
               
               {/* 404 Route */}
               <Route path="*" element={<Layout><div>Page Not Found</div></Layout>} />

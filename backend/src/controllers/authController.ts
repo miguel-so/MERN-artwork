@@ -38,6 +38,10 @@ export const register = async (req: Request, res: Response) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
+    // Generate email verification token
+    const emailVerificationToken = crypto.randomBytes(20).toString('hex');
+    const emailVerificationExpire = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
     // Create user
     const user = await User.create({
       name,
@@ -45,25 +49,55 @@ export const register = async (req: Request, res: Response) => {
       password: hashedPassword,
       bio,
       role: 'artist',
-      isActive: false
+      isActive: false,
+      isEmailVerified: false,
+      emailVerificationToken,
+      emailVerificationExpire
     });
 
-    const token = generateToken(user.id);
+    // Send verification email
+    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email/${emailVerificationToken}`;
+    const message = `
+      Welcome to Dulcinea Art!
+      
+      Please click the link below to verify your email address:
+      ${verificationUrl}
+      
+      This link will expire in 24 hours.
+      
+      Best regards,
+      Dulcinea Art Team
+    `;
 
-    res.status(201).json({
-      success: true,
-      data: {
-        token,
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          isActive: user.isActive,
-          bio: user.bio
+    try {
+      await sendEmail({
+        email: user.email,
+        subject: 'Email Verification - Dulcinea Art',
+        message
+      });
+
+      res.status(201).json({
+        success: true,
+        message: 'Registration successful. Please check your email to verify your account.',
+        data: {
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            isActive: user.isActive,
+            isEmailVerified: user.isEmailVerified
+          }
         }
-      }
-    });
+      });
+    } catch (error) {
+      // If email fails, delete the user
+      await User.destroy({ where: { id: user.id } });
+      return res.status(500).json({
+        success: false,
+        message: 'Registration failed. Please try again.'
+      });
+    }
   } catch (error: any) {
     res.status(400).json({
       success: false,
@@ -94,6 +128,22 @@ export const login = async (req: Request, res: Response) => {
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
+      });
+    }
+
+    // Check if email is verified
+    if (!user.isEmailVerified) {
+      return res.status(401).json({
+        success: false,
+        message: 'Please verify your email address before logging in'
+      });
+    }
+
+    // Check if account is activated (for artists)
+    if (user.role === 'artist' && !user.isActive) {
+      return res.status(401).json({
+        success: false,
+        message: 'Your account is pending activation by an administrator'
       });
     }
 
@@ -173,7 +223,7 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// @desc    Forgot password
+// @desc    Forgot password - Send 6-digit code
 // @route   POST /api/auth/forgot-password
 // @access  Public
 export const forgotPassword = async (req: Request, res: Response) => {
@@ -187,50 +237,47 @@ export const forgotPassword = async (req: Request, res: Response) => {
       });
     }
 
-    // Get reset token
-    const resetToken = crypto.randomBytes(20).toString('hex');
-
-    // Hash token and set to resetPasswordToken field
-    const hashedToken = crypto
-      .createHash('sha256')
-      .update(resetToken)
-      .digest('hex');
-
-    // Set expire
-    const resetExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    // Generate 6-digit code
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const resetCodeExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
     await User.update(
       {
-        resetPasswordToken: hashedToken,
-        resetPasswordExpire: resetExpire
+        resetPasswordCode: resetCode,
+        resetPasswordCodeExpire: resetCodeExpire
       },
       { where: { id: user.id } }
     );
 
-    // Create reset url
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
-
     const message = `
-      You are receiving this email because you (or someone else) has requested the reset of a password. 
-      Please make a PUT request to: \n\n ${resetUrl}
+      You requested a password reset for your Dulcinea Art account.
+      
+      Your reset code is: ${resetCode}
+      
+      This code will expire in 10 minutes.
+      
+      If you didn't request this, please ignore this email.
+      
+      Best regards,
+      Dulcinea Art Team
     `;
 
     try {
       await sendEmail({
         email: user.email,
-        subject: 'Password Reset Token',
+        subject: 'Password Reset Code - Dulcinea Art',
         message
       });
 
       res.json({
         success: true,
-        message: 'Email sent'
+        message: 'Reset code sent to your email'
       });
     } catch (error) {
       await User.update(
         {
-          resetPasswordToken: undefined,
-          resetPasswordExpire: undefined
+          resetPasswordCode: undefined,
+          resetPasswordCodeExpire: undefined
         },
         { where: { id: user.id } }
       );
@@ -248,21 +295,18 @@ export const forgotPassword = async (req: Request, res: Response) => {
   }
 };
 
-// @desc    Reset password
-// @route   PUT /api/auth/reset-password/:resettoken
+// @desc    Reset password with 6-digit code
+// @route   PUT /api/auth/reset-password
 // @access  Public
 export const resetPassword = async (req: Request, res: Response) => {
   try {
-    // Get hashed token
-    const resetPasswordToken = crypto
-      .createHash('sha256')
-      .update(req.params.resettoken)
-      .digest('hex');
+    const { email, code, password } = req.body;
 
     const user = await User.findOne({
       where: {
-        resetPasswordToken,
-        resetPasswordExpire: {
+        email,
+        resetPasswordCode: code,
+        resetPasswordCodeExpire: {
           [require('sequelize').Op.gt]: new Date()
         }
       }
@@ -271,38 +315,72 @@ export const resetPassword = async (req: Request, res: Response) => {
     if (!user) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid token'
+        message: 'Invalid or expired reset code'
       });
     }
 
     // Hash new password
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(req.body.password, salt);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Set new password
+    // Set new password and clear reset code
     await User.update(
       {
         password: hashedPassword,
-        resetPasswordToken: undefined,
-        resetPasswordExpire: undefined
+        resetPasswordCode: undefined,
+        resetPasswordCodeExpire: undefined
       },
       { where: { id: user.id } }
     );
 
-    const token = generateToken(user.id);
+    res.json({
+      success: true,
+      message: 'Password reset successfully'
+    });
+  } catch (error: any) {
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+// @desc    Verify email
+// @route   GET /api/auth/verify-email/:token
+// @access  Public
+export const verifyEmail = async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+
+    const user = await User.findOne({
+      where: {
+        emailVerificationToken: token,
+        emailVerificationExpire: {
+          [require('sequelize').Op.gt]: new Date()
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired verification token'
+      });
+    }
+
+    // Mark email as verified
+    await User.update(
+      {
+        isEmailVerified: true,
+        emailVerificationToken: undefined,
+        emailVerificationExpire: undefined
+      },
+      { where: { id: user.id } }
+    );
 
     res.json({
       success: true,
-      data: {
-        token,
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          isActive: user.isActive
-        }
-      }
+      message: 'Email verified successfully'
     });
   } catch (error: any) {
     res.status(400).json({

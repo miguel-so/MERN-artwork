@@ -6,12 +6,15 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 
 import { connectDB } from './config/database';
+import { seedSuperAdmin } from './utils/seedSuperAdmin';
 
 // Route files
 import authRoutes from './routes/auth';
 import artworkRoutes from './routes/artworks';
 import contactRoutes from './routes/contact';
 import categoryRoutes from './routes/categories';
+import adminRoutes from './routes/admin';
+import artistRoutes from './routes/artist';
 
 // Load env vars
 dotenv.config();
@@ -49,6 +52,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/artworks', artworkRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/artist', artistRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -83,6 +88,10 @@ const PORT = process.env.PORT || 5000;
 const startServer = async () => {
   try {
     await connectDB();
+    
+    // Seed super admin
+    await seedSuperAdmin();
+    
     const server = app.listen(PORT, () => {
       console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
     });
