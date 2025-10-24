@@ -11,6 +11,7 @@ import { connectDB } from './config/database';
 import authRoutes from './routes/auth';
 import artworkRoutes from './routes/artworks';
 import contactRoutes from './routes/contact';
+import categoryRoutes from './routes/categories';
 
 // Load env vars
 dotenv.config();
@@ -47,6 +48,7 @@ if (process.env.NODE_ENV === 'development') {
 app.use('/api/auth', authRoutes);
 app.use('/api/artworks', artworkRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/categories', categoryRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

@@ -7,14 +7,14 @@ interface EmailOptions {
 }
 
 export const sendEmail = async (options: EmailOptions): Promise<void> => {
-  // Create transporter
+  // Create transporter for GoDaddy SMTP
   const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.sendgrid.net',
+    host: process.env.SMTP_HOST || 'smtpout.secureserver.net',
     port: parseInt(process.env.SMTP_PORT || '587'),
     secure: false, // true for 465, false for other ports
     auth: {
-      user: 'apikey',
-      pass: process.env.SENDGRID_API_KEY
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASSWORD
     }
   });
 
