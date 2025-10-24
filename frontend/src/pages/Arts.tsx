@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Form, Button, Spinner, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Form, Button, Spinner, Alert, Card } from 'react-bootstrap';
 import { useSearchParams } from 'react-router-dom';
 import { artworkAPI, categoryAPI } from '../services/api';
 import { Artwork, Category } from '../types';
